@@ -54,7 +54,7 @@ except (OSError, IOError) as exception:
 
 GOO_GL_URL = 'https://www.googleapis.com/urlshortener/v1/url'
 
-TG_BOT = Bot(api_token=TG_TOKEN)
+TG_BOT = Bot(api_token=TG_TOKEN, default_in_groups=True)
 MATRIX_SESS = ClientSession()
 SHORTEN_SESS = ClientSession()
 
@@ -612,8 +612,8 @@ async def aiotg_alias(chat, match):
                      .format(chat.id, MATRIX_HOST_BARE))
 
 
-@TG_BOT.command(r'(?s)(.*)')
-async def aiotg_message(chat, match):
+@TG_BOT.default
+async def aiotg_message(chat, msg):
     logging.debug("aiotg_message")
     link = db.session.query(db.ChatLink).filter_by(tg_room=chat.id).first()
     logging.debug("link: {}".format(link))
@@ -629,7 +629,7 @@ async def aiotg_message(chat, match):
     user_id = USER_ID_FORMAT.format(chat.sender['id'])
     txn_id = quote('{}:{}'.format(chat.message['message_id'], chat.id))
 
-    message = match.group(0)
+    message = msg["text"]
 
     if 'forward_from' in chat.message:
         fw_from = chat.message['forward_from']
