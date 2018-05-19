@@ -46,6 +46,7 @@ try:
         DATABASE_URL = CONFIG['db_url']
 
         AS_PORT = CONFIG['as_port'] if 'as_port' in CONFIG else 5000
+        LOG_LEVEL = CONFIG['log_level'] if 'log_level' in CONFIG else "WARNING"
 except (OSError, IOError) as exception:
     print('Error opening config file:')
     print(exception)
@@ -460,7 +461,7 @@ async def update_matrix_displayname_avatar(tg_user):
         name += ' ' + tg_user['last_name']
     name += ' (Telegram)'
     user_id = USER_ID_FORMAT.format(tg_user['id'])
-    
+
     db_user = db.session.query(db.TgUser).filter_by(tg_id=tg_user['id']).first()
 
     profile_photos = await TG_BOT.get_user_profile_photos(tg_user['id'])
@@ -491,7 +492,7 @@ async def update_matrix_displayname_avatar(tg_user):
             await matrix_put('client', 'profile/{}/avatar_url'.format(user_id), user_id, {'avatar_url':None})
         db.session.add(db_user)
     db.session.commit()
-        
+
 
 @TG_BOT.handle('sticker')
 async def aiotg_sticker(chat, sticker):
@@ -703,7 +704,7 @@ def main():
     """
     Main function to get the entire ball rolling.
     """
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper()))
     db.initialize(DATABASE_URL)
 
     loop = asyncio.get_event_loop()
