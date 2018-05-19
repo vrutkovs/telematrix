@@ -616,10 +616,13 @@ async def aiotg_alias(chat, match):
 async def aiotg_message(chat, match):
     logging.debug("aiotg_message")
     link = db.session.query(db.ChatLink).filter_by(tg_room=chat.id).first()
+    logging.debug("link: {}".format(link))
     if link:
         room_id = link.matrix_room
+        logging.debug("room_id: {}".format(room_id))
     else:
         print('Unknown telegram chat {}: {}'.format(chat, chat.id))
+        logging.debug("Unknown telegram chat {}: {}".format(chat, chat.id))
         return
 
     await update_matrix_displayname_avatar(chat.sender);
@@ -732,8 +735,8 @@ def main():
     app.router.add_route('GET', '/rooms/{room_alias}', matrix_room)
     app.router.add_route('PUT', '/transactions/{transaction}',
                          matrix_transaction)
-    web.run_app(app, port=AS_PORT)
     logging.debug("Telematrix is running on port {}".format(AS_PORT))
+    web.run_app(app, port=AS_PORT)
 
 
 if __name__ == "__main__":
