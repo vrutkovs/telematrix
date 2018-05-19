@@ -125,6 +125,7 @@ async def shorten_url(url):
     :param url: The URL to shorten.
     :return: The shortened URL.
     """
+    logging.debug("shorten_url")
     if not GOOGLE_TOKEN:
         return url
 
@@ -141,10 +142,12 @@ async def shorten_url(url):
         return url
 
 def matrix_is_telegram(user_id):
+    logging.debug("matrix_is_telegram")
     username = user_id.split(':')[0][1:]
     return username.startswith('telegram_')
 
 def get_username(user_id):
+    logging.debug("get_username")
     return user_id.split(':')[0][1:]
 
 mime_extensions = {
@@ -163,6 +166,7 @@ async def matrix_transaction(request):
     :param request: The request containing the transaction.
     :return: The response to send.
     """
+    logging.debug("matrix_transaction")
     body = await request.json()
     events = body['events']
     for event in events:
@@ -332,6 +336,7 @@ async def matrix_transaction(request):
 
 async def _matrix_request(method_fun, category, path, user_id, data=None,
                           content_type=None):
+    logging.debug("_matrix_request")
     # pylint: disable=too-many-arguments
     # Due to this being a helper function, the argument count acceptable
     if content_type is None:
@@ -357,24 +362,29 @@ async def _matrix_request(method_fun, category, path, user_id, data=None,
 
 
 def matrix_post(category, path, user_id, data, content_type=None):
+    logging.debug("matrix_post")
     return _matrix_request(MATRIX_SESS.post, category, path, user_id, data,
                            content_type)
 
 
 def matrix_put(category, path, user_id, data, content_type=None):
+    logging.debug("matrix_put")
     return _matrix_request(MATRIX_SESS.put, category, path, user_id, data,
                            content_type)
 
 
 def matrix_get(category, path, user_id):
+    logging.debug("matrix_get")
     return _matrix_request(MATRIX_SESS.get, category, path, user_id)
 
 
 def matrix_delete(category, path, user_id):
+    logging.debug("matrix_delete")
     return _matrix_request(MATRIX_SESS.delete, category, path, user_id)
 
 
 async def matrix_room(request):
+    logging.debug("matrix_room")
     room_alias = request.match_info['room_alias']
     args = parse_qs(urlparse(request.path_qs).query)
     print('Checking for {} | {}'.format(unquote(room_alias),
@@ -430,6 +440,7 @@ async def upload_tgfile_to_matrix(file_id, user_id, mime='image/jpeg', convert_t
 
 
 async def register_join_matrix(chat, room_id, user_id):
+    logging.debug("register_join_matrix")
     name = chat.sender['first_name']
     if 'last_name' in chat.sender:
         name += ' ' + chat.sender['last_name']
@@ -445,8 +456,8 @@ async def register_join_matrix(chat, room_id, user_id):
         if pp_uri:
             await matrix_put('client', 'profile/{}/avatar_url'.format(user_id),
                              user_id, {'avatar_url': pp_uri})
-    except IndexError:
-        pass
+    except IndexError as e:
+        logging.error(str(e))
 
     await matrix_put('client', 'profile/{}/displayname'.format(user_id),
                      user_id, {'displayname': name})
@@ -454,8 +465,11 @@ async def register_join_matrix(chat, room_id, user_id):
     if 'errcode' in j and j['errcode'] == 'M_FORBIDDEN':
         print("Error with <{}> joining room <{}>. This is likely because guests are not allowed to join the room."
               .format(user_id, room_id))
+    else:
+        logging.debug("Joined matrix room")
 
 async def update_matrix_displayname_avatar(tg_user):
+    logging.debug("update_matrix_displayname_avatar")
     name = tg_user['first_name']
     if 'last_name' in tg_user:
         name += ' ' + tg_user['last_name']
@@ -496,6 +510,7 @@ async def update_matrix_displayname_avatar(tg_user):
 
 @TG_BOT.handle('sticker')
 async def aiotg_sticker(chat, sticker):
+    logging.debug("aiotg_sticker")
     link = db.session.query(db.ChatLink).filter_by(tg_room=chat.id).first()
     if not link:
         print('Unknown telegram chat {}: {}'.format(chat, chat.id))
@@ -544,6 +559,7 @@ async def aiotg_sticker(chat, sticker):
 
 @TG_BOT.handle('photo')
 async def aiotg_photo(chat, photo):
+    logging.debug("aiotg_photo")
     link = db.session.query(db.ChatLink).filter_by(tg_room=chat.id).first()
     if not link:
         print('Unknown telegram chat {}: {}'.format(chat, chat.id))
@@ -591,12 +607,14 @@ async def aiotg_photo(chat, photo):
 
 @TG_BOT.command(r'/alias')
 async def aiotg_alias(chat, match):
+    logging.debug("aiotg_alias")
     await chat.reply('The Matrix alias for this chat is #telegram_{}:{}'
                      .format(chat.id, MATRIX_HOST_BARE))
 
 
 @TG_BOT.command(r'(?s)(.*)')
 async def aiotg_message(chat, match):
+    logging.debug("aiotg_message")
     link = db.session.query(db.ChatLink).filter_by(tg_room=chat.id).first()
     if link:
         room_id = link.matrix_room
@@ -715,6 +733,7 @@ def main():
     app.router.add_route('PUT', '/transactions/{transaction}',
                          matrix_transaction)
     web.run_app(app, port=AS_PORT)
+    logging.debug("Telematrix is running on port {}".format(AS_PORT))
 
 
 if __name__ == "__main__":
